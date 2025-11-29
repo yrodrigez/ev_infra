@@ -1,0 +1,44 @@
+---
+- name: Install required packages
+  apt:
+    name:
+      - curl
+      - ca-certificates
+      - docker.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure Docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Create services directory
+  file:
+    path: /opt/services
+    state: directory
+    mode: '0755'
+
+- name: Copy docker-compose.yml
+  copy:
+    src: docker-compose.yml
+    dest: /opt/services/docker-compose.yml
+    mode: '0644'
+  notify: Restart services
+
+- name: Create .env file with secrets
+  copy:
+    dest: /opt/services/.env
+    mode: '0600'
+    content: |
+      TUNNEL_TOKEN={{ lookup('env', 'CLOUDFLARE_TOKEN') | default(ansible_env.CLOUDFLARE_TOKEN, true) }}
+  notify: Restart services
+
+- name: Start services with Docker Compose
+  command: docker compose up -d
+  args:
+    chdir: /opt/services
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Recreated' in compose_result.stdout"

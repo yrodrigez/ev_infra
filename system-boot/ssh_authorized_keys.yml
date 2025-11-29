@@ -1,0 +1,46 @@
+#cloud-config
+hostname: {{DEVICE_HOSTNAME}}
+manage_etc_hosts: true
+
+users:
+  - name: {{USER_NAME}}
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    ssh_authorized_keys:
+      - {{SSH_PUBLIC_KEY_LINE}}
+
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - ansible
+
+write_files:
+  - path: /etc/ansible/facts.d/secrets.fact
+    content: |
+      [secrets]
+      cloudflare_token={{CLOUDFLARE_TOKEN}}
+
+  - path: /usr/local/bin/ansible_bootstrap.sh
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      
+      REPO_URL="{{REPO_URL}}"
+      CODE_DIR="/etc/ansible/code"
+
+      if [ -d "$CODE_DIR/.git" ]; then
+        git -C "$CODE_DIR" pull --ff-only
+      else
+        rm -rf "$CODE_DIR"
+        git clone "$REPO_URL" "$CODE_DIR"
+      fi
+
+      export CLOUDFLARE_TOKEN="{{CLOUDFLARE_TOKEN}}"
+      
+      ansible-playbook -i "localhost," -c local "$CODE_DIR/playbooks/site.yml"
+
+runcmd:
+  - [ bash, /usr/local/bin/ansible_bootstrap.sh ]
