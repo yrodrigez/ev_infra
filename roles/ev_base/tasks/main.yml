@@ -5,8 +5,15 @@
       - curl
       - ca-certificates
       - docker.io
+      - python3-pip
     state: present
     update_cache: yes
+
+- name: Install docker-compose via pip
+  pip:
+    name: docker-compose
+    state: present
+    executable: pip3
 
 - name: Ensure Docker service is running
   service:
@@ -36,7 +43,7 @@
   notify: Restart services
 
 - name: Start services with Docker Compose
-  command: docker compose up -d
+  command: docker-compose up -d
   args:
     chdir: /opt/services
   register: compose_result
