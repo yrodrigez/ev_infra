@@ -5,15 +5,14 @@
       - curl
       - ca-certificates
       - docker.io
-      - python3-pip
     state: present
     update_cache: yes
 
-- name: Install docker-compose via pip
-  pip:
-    name: docker-compose
-    state: present
-    executable: pip3
+- name: Download docker-compose binary
+  get_url:
+    url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
 
 - name: Ensure Docker service is running
   service:
