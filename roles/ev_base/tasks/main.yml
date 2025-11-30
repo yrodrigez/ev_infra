@@ -32,7 +32,7 @@
     dest: /opt/services/.env
     mode: '0600'
     content: |
-      TUNNEL_TOKEN={{ lookup('env', 'CLOUDFLARE_TOKEN') | default(ansible_env.CLOUDFLARE_TOKEN, true) }}
+      TUNNEL_TOKEN={{ lookup('env', 'CLOUDFLARE_TOKEN') }}
   notify: Restart services
 
 - name: Start services with Docker Compose
