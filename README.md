@@ -119,41 +119,41 @@ ssh your-username@<pi-ip-address>
 ┌─────────────────────────────────────────┐
 │           Raspberry Pi                  │
 │                                         │
-│  ┌───────────────────────────────────┐ │
-│  │      Cloud-init (First Boot)      │ │
-│  │  • User creation                  │ │
-│  │  • SSH setup                      │ │
-│  │  • Package installation           │ │
-│  └──────────────┬────────────────────┘ │
+│  ┌───────────────────────────────────┐  │
+│  │      Cloud-init (First Boot)      │  │
+│  │  • User creation                  │  │
+│  │  • SSH setup                      │  │
+│  │  • Package installation           │  │
+│  └──────────────┬────────────────────┘  │
 │                 │                       │
-│  ┌──────────────▼────────────────────┐ │
-│  │      Ansible Bootstrap            │ │
-│  │  • Git clone repository           │ │
-│  │  • Run playbook locally           │ │
-│  └──────────────┬────────────────────┘ │
+│  ┌──────────────▼────────────────────┐  │
+│  │      Ansible Bootstrap            │  │
+│  │  • Git clone repository           │  │
+│  │  • Run playbook locally           │  │
+│  └──────────────┬────────────────────┘  │
 │                 │                       │
-│  ┌──────────────▼────────────────────┐ │
-│  │      Ansible Playbook             │ │
-│  │  • Install Docker                 │ │
-│  │  • Configure services             │ │
-│  │  • Inject secrets                 │ │
-│  └──────────────┬────────────────────┘ │
+│  ┌──────────────▼────────────────────┐  │
+│  │      Ansible Playbook             │  │
+│  │  • Install Docker                 │  │
+│  │  • Configure services             │  │
+│  │  • Inject secrets                 │  │
+│  └──────────────┬────────────────────┘  │
 │                 │                       │
-│  ┌──────────────▼────────────────────┐ │
-│  │      Docker Compose               │ │
-│  │  • Web services                   │ │
-│  │  • Cloudflare Tunnel              │ │
-│  └───────────────────────────────────┘ │
+│  ┌──────────────▼────────────────────┐  │
+│  │      Docker Compose               │  │
+│  │  • Web services                   │  │
+│  │  • Cloudflare Tunnel              │  │
+│  └───────────────────────────────────┘  │
 └─────────────────────────────────────────┘
-                  │
-                  │ Secure Tunnel
-                  ▼
-         ┌────────────────┐
-         │   Cloudflare   │
-         │     Network    │
-         └────────────────┘
-                  │
-                  ▼
+                   │
+                   │ Secure Tunnel
+                   ▼
+            ┌────────────────┐
+            │   Cloudflare   │
+            │     Network    │
+            └────────────────┘
+                    │
+                    ▼
             Internet Users
 ```
 

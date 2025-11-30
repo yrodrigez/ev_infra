@@ -1,0 +1,7 @@
+[all]
+kernel=vmlinuz
+cmdline=cmdline.txt
+initramfs initrd.img followkernel
+
+# Include user config
+include usercfg.txt

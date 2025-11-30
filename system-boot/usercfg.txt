@@ -1,0 +1,6 @@
+hdmi_force_hotplug=1
+hdmi_group=2
+hdmi_mode=82
+dtparam=audio=on
+dtoverlay=vc4-kms-v3d
+enable_uart=1

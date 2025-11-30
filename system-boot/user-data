@@ -15,6 +15,7 @@ package_upgrade: true
 packages:
   - git
   - ansible
+  - openssh-server
 
 write_files:
   - path: /etc/ansible/facts.d/secrets.fact

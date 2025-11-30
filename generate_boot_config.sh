@@ -20,10 +20,22 @@ if [ ! -d "$DEST_DIR" ]; then
     exit 1
 fi
 
+# Define target directory (root of destination)
+TARGET_DIR="$DEST_DIR"
+
 # Process SSH key from file if path is provided
 if [ -n "${SSH_PUBLIC_KEY_PATH:-}" ]; then
     # Expand ~ to user home if present
     SSH_PUBLIC_KEY_PATH="${SSH_PUBLIC_KEY_PATH/#\~/$HOME}"
+    
+    # If the path doesn't end with .pub, try appending .pub
+    if [[ ! "$SSH_PUBLIC_KEY_PATH" =~ \.pub$ ]]; then
+        PUB_KEY_PATH="${SSH_PUBLIC_KEY_PATH}.pub"
+        if [ -f "$PUB_KEY_PATH" ]; then
+            SSH_PUBLIC_KEY_PATH="$PUB_KEY_PATH"
+            echo "Auto-detected public key file: $SSH_PUBLIC_KEY_PATH"
+        fi
+    fi
     
     if [ ! -f "$SSH_PUBLIC_KEY_PATH" ]; then
         echo "Error: SSH public key file not found: $SSH_PUBLIC_KEY_PATH"
@@ -32,6 +44,13 @@ if [ -n "${SSH_PUBLIC_KEY_PATH:-}" ]; then
     
     # Read the entire public key line
     SSH_PUBLIC_KEY_LINE=$(cat "$SSH_PUBLIC_KEY_PATH")
+    
+    # Validate that it looks like a public key
+    if [[ ! "$SSH_PUBLIC_KEY_LINE" =~ ^(ssh-|ecdsa-) ]]; then
+        echo "Error: File does not appear to contain a valid SSH public key: $SSH_PUBLIC_KEY_PATH"
+        echo "Public keys should start with 'ssh-rsa', 'ssh-ed25519', 'ecdsa-', etc."
+        exit 1
+    fi
     
     echo "Loaded SSH key from: $SSH_PUBLIC_KEY_PATH"
 fi
@@ -54,31 +73,34 @@ fi
 
 # --- Generate Files ---
 
-echo "Generating configuration files in $DEST_DIR..."
+echo "Generating configuration files in $TARGET_DIR..."
 
 # Copy files
-cp -r system-boot/* "$DEST_DIR/"
+cp -r system-boot/* "$TARGET_DIR/"
 
 # Function to replace placeholder in a file
 replace_var() {
     local file="$1"
     local var="$2"
     local value="$3"
-    # Use | as delimiter to avoid issues with slashes in URLs/paths
-    sed -i "s|{{$var}}|$value|g" "$file"
+    # Use awk to avoid sed escaping issues
+    awk -v var="{{$var}}" -v val="$value" '{gsub(var, val); print}' "$file" > "$file.tmp"
+    mv "$file.tmp" "$file"
 }
 
-# Process ssh_authorized_keys.yml
-TARGET_SSH="$DEST_DIR/ssh_authorized_keys.yml"
-replace_var "$TARGET_SSH" "USER_NAME" "$USER_NAME"
-replace_var "$TARGET_SSH" "DEVICE_HOSTNAME" "$DEVICE_HOSTNAME"
-replace_var "$TARGET_SSH" "SSH_PUBLIC_KEY_LINE" "$SSH_PUBLIC_KEY_LINE"
-replace_var "$TARGET_SSH" "REPO_URL" "$REPO_URL"
-replace_var "$TARGET_SSH" "CLOUDFLARE_TOKEN" "$CLOUDFLARE_TUNNEL_TOKEN"
+# Process user-data (cloud-init config)
+TARGET_USER_DATA="$TARGET_DIR/user-data"
+replace_var "$TARGET_USER_DATA" "USER_NAME" "$USER_NAME"
+replace_var "$TARGET_USER_DATA" "DEVICE_HOSTNAME" "$DEVICE_HOSTNAME"
+replace_var "$TARGET_USER_DATA" "SSH_PUBLIC_KEY_LINE" "$SSH_PUBLIC_KEY_LINE"
+replace_var "$TARGET_USER_DATA" "REPO_URL" "$REPO_URL"
+replace_var "$TARGET_USER_DATA" "CLOUDFLARE_TOKEN" "$CLOUDFLARE_TUNNEL_TOKEN"
 
-# Process metadata.yml
-TARGET_META="$DEST_DIR/metadata.yml"
-sed -i "s|local-hostname: .*|local-hostname: $DEVICE_HOSTNAME|" "$TARGET_META"
-sed -i "s|instance-id: .*|instance-id: $DEVICE_HOSTNAME-001|" "$TARGET_META"
+# Process meta-data
+TARGET_META="$TARGET_DIR/meta-data"
+awk -v val="$DEVICE_HOSTNAME" '/^local-hostname:/ {$0="local-hostname: " val} {print}' "$TARGET_META" > "$TARGET_META.tmp"
+mv "$TARGET_META.tmp" "$TARGET_META"
+awk -v val="$DEVICE_HOSTNAME-001" '/^instance-id:/ {$0="instance-id: " val} {print}' "$TARGET_META" > "$TARGET_META.tmp"
+mv "$TARGET_META.tmp" "$TARGET_META"
 
-echo "Done! Configuration files are ready in $DEST_DIR"
+echo "Done! Configuration files are ready in $TARGET_DIR"
