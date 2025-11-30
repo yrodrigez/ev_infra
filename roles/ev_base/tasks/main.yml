@@ -5,7 +5,6 @@
       - curl
       - ca-certificates
       - docker.io
-      - docker-compose-plugin
     state: present
     update_cache: yes
 
