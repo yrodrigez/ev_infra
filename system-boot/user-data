@@ -31,9 +31,16 @@ write_files:
       #!/usr/bin/env bash
       set -euo pipefail
       
+      # Logging setup
+      LOG_FILE="/var/log/ansible_bootstrap.log"
+      exec > >(tee -a "${LOG_FILE}") 2>&1
+      
+      echo "[$(date)] Starting Ansible Bootstrap..."
+
       REPO_URL="{{REPO_URL}}"
       CODE_DIR="/etc/ansible/code"
 
+      echo "[$(date)] Cloning/Pulling repository from $REPO_URL..."
       if [ -d "$CODE_DIR/.git" ]; then
         git -C "$CODE_DIR" pull --ff-only
       else
@@ -43,7 +50,10 @@ write_files:
 
       export CLOUDFLARE_TOKEN="{{CLOUDFLARE_TOKEN}}"
       
+      echo "[$(date)] Running Ansible Playbook..."
       ansible-playbook -i "localhost," -c local "$CODE_DIR/playbooks/site.yml"
+      
+      echo "[$(date)] Bootstrap Completed Successfully!"
 
 runcmd:
   - [ bash, /usr/local/bin/ansible_bootstrap.sh ]
