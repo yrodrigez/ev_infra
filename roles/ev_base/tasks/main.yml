@@ -38,8 +38,13 @@
     dest: /opt/services/.env
     mode: '0600'
     content: |
-      TUNNEL_TOKEN={{ lookup('env', 'CLOUDFLARE_TOKEN') }}
+      TUNNEL_TOKEN={{ ansible_local.secrets.secrets.cloudflare_token | default('') }}
   notify: Restart services
+
+- name: Fail if Cloudflare token is missing
+  fail:
+    msg: "Cloudflare token is missing. Please ensure /etc/ansible/facts.d/secrets.fact exists and contains cloudflare_token."
+  when: ansible_local.secrets.secrets.cloudflare_token is not defined or ansible_local.secrets.secrets.cloudflare_token == ''
 
 - name: Start services with Docker Compose
   command: docker-compose up -d
