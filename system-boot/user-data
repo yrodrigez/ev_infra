@@ -22,6 +22,8 @@ write_files:
     content: |
       [secrets]
       cloudflare_token={{CLOUDFLARE_TOKEN}}
+      github_runner_token={{GITHUB_RUNNER_TOKEN}}
+      github_repo_url={{GITHUB_REPO_URL}}
 
   - path: /usr/local/bin/ansible_bootstrap.sh
     permissions: '0755'

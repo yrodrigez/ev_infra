@@ -1,5 +1,7 @@
 # EV Infrastructure
 
+![Architecture Diagram](diagram.png)
+
 Automated infrastructure provisioning for Raspberry Pi devices using Ansible and cloud-init. This project automatically configures a Raspberry Pi to run containerized services with secure external access via Cloudflare Tunnel.
 
 ## Features

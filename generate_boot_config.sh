@@ -56,7 +56,8 @@ if [ -n "${SSH_PUBLIC_KEY_PATH:-}" ]; then
 fi
 
 # Required variables
-REQUIRED_VARS=("USER_NAME" "DEVICE_HOSTNAME" "REPO_URL" "CLOUDFLARE_TUNNEL_TOKEN" "SSH_PUBLIC_KEY_LINE")
+# Required variables
+REQUIRED_VARS=("USER_NAME" "DEVICE_HOSTNAME" "REPO_URL" "CLOUDFLARE_TUNNEL_TOKEN" "SSH_PUBLIC_KEY_LINE" "GITHUB_RUNNER_TOKEN")
 
 MISSING_VARS=0
 for VAR in "${REQUIRED_VARS[@]}"; do
@@ -71,12 +72,21 @@ if [ "$MISSING_VARS" -eq 1 ]; then
     exit 1
 fi
 
+# Set default for repo url if not set
+GITHUB_REPO_URL="${GITHUB_REPO_URL:-$REPO_URL}"
+
 # --- Generate Files ---
 
 echo "Generating configuration files in $TARGET_DIR..."
 
-# Copy files
-cp -r system-boot/* "$TARGET_DIR/"
+# Copy files individually (more reliable on Windows)
+for file in system-boot/*; do
+    filename=$(basename "$file")
+    # Delete target file first to avoid Windows lock issues
+    rm -f "$TARGET_DIR/$filename" 2>/dev/null || true
+    # Now copy
+    cp "$file" "$TARGET_DIR/$filename"
+done
 
 # Function to replace placeholder in a file
 replace_var() {
@@ -95,6 +105,8 @@ replace_var "$TARGET_USER_DATA" "DEVICE_HOSTNAME" "$DEVICE_HOSTNAME"
 replace_var "$TARGET_USER_DATA" "SSH_PUBLIC_KEY_LINE" "$SSH_PUBLIC_KEY_LINE"
 replace_var "$TARGET_USER_DATA" "REPO_URL" "$REPO_URL"
 replace_var "$TARGET_USER_DATA" "CLOUDFLARE_TOKEN" "$CLOUDFLARE_TUNNEL_TOKEN"
+replace_var "$TARGET_USER_DATA" "GITHUB_RUNNER_TOKEN" "$GITHUB_RUNNER_TOKEN"
+replace_var "$TARGET_USER_DATA" "GITHUB_REPO_URL" "$GITHUB_REPO_URL"
 
 # Process meta-data
 TARGET_META="$TARGET_DIR/meta-data"

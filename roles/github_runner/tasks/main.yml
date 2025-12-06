@@ -1,0 +1,75 @@
+---
+- name: Create runner user
+  user:
+    name: "{{ runner_user }}"
+    shell: /bin/bash
+    groups: docker
+    append: yes
+
+- name: Create runner directory
+  file:
+    path: "{{ runner_dir }}"
+    state: directory
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: '0755'
+
+- name: Install dependencies
+  apt:
+    name:
+      - curl
+      - jq
+      - libdigest-sha-perl
+      # Dotnet dependencies (required for runner)
+      - libicu-dev
+      - libssl-dev
+    state: present
+    update_cache: yes
+
+- name: Check if runner is already configured
+  stat:
+    path: "{{ runner_dir }}/.runner"
+  register: runner_configured
+
+- name: Download GitHub Runner
+  get_url:
+    url: "https://github.com/actions/runner/releases/download/v{{ runner_version }}/actions-runner-linux-arm64-{{ runner_version }}.tar.gz"
+    dest: "{{ runner_dir }}/actions-runner.tar.gz"
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: '0644'
+  when: not runner_configured.stat.exists
+
+- name: Extract GitHub Runner
+  unarchive:
+    src: "{{ runner_dir }}/actions-runner.tar.gz"
+    dest: "{{ runner_dir }}"
+    remote_src: yes
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+  when: not runner_configured.stat.exists
+
+- name: Fail if Runner Token is missing
+  fail:
+    msg: "GitHub Runner Token is missing. Please ensure secrets.fact has github_runner_token."
+  when: not runner_configured.stat.exists and (runner_token is not defined or runner_token == '')
+
+- name: Configure Runner
+  command:
+    cmd: "./config.sh --url {{ repo_url }} --token {{ runner_token }} --unattended --name {{ ansible_hostname }} --labels raspberry-pi,arm64"
+    chdir: "{{ runner_dir }}"
+  become: yes
+  become_user: "{{ runner_user }}"
+  when: not runner_configured.stat.exists
+
+- name: Install Runner Service
+  command:
+    cmd: "./svc.sh install {{ runner_user }}"
+    chdir: "{{ runner_dir }}"
+  ignore_errors: yes # Ignore if already installed
+
+- name: Start Runner Service
+  command:
+    cmd: "./svc.sh start"
+    chdir: "{{ runner_dir }}"
+  ignore_errors: yes # Ignore if already started

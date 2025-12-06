@@ -1,0 +1,7 @@
+---
+runner_version: "2.330.0"
+runner_user: "runner"
+runner_dir: "/home/{{ runner_user }}/actions-runner"
+# Token should be provided via secrets.fact
+runner_token: "{{ ansible_local.secrets.secrets.github_runner_token | default('') }}"
+repo_url: "{{ ansible_local.secrets.secrets.github_repo_url | default('https://github.com/yrodrigez/ev_infra') }}"
