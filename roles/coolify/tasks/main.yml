@@ -1,53 +1,97 @@
 ---
-- name: Check if Coolify is already installed
-  stat:
-    path: "{{ coolify_data_dir }}/source/.env"
-  register: coolify_installed
-
-- name: Ensure data directory exists
+- name: Create Coolify directories
   file:
-    path: "{{ coolify_data_dir }}"
+    path: "{{ item }}"
     state: directory
-    mode: '0755'
-  when: not coolify_installed.stat.exists
+    mode: '0700'
+  loop:
+    - /data/coolify/source
+    - /data/coolify/ssh/keys
+    - /data/coolify/ssh/mux
+    - /data/coolify/applications
+    - /data/coolify/databases
+    - /data/coolify/backups
+    - /data/coolify/services
+    - /data/coolify/proxy/dynamic
+    - /data/coolify/webhooks-during-maintenance
 
-- name: Download Coolify installer
+- name: Check if SSH key exists
+  stat:
+    path: /data/coolify/ssh/keys/id.root@host.docker.internal
+  register: coolify_ssh_key
+
+- name: Generate SSH key for Coolify
+  command: ssh-keygen -f /data/coolify/ssh/keys/id.root@host.docker.internal -t ed25519 -N '' -C root@coolify
+  when: not coolify_ssh_key.stat.exists
+
+- name: Add Coolify SSH key to authorized_keys
+  authorized_key:
+    user: root
+    state: present
+    key: "{{ lookup('file', '/data/coolify/ssh/keys/id.root@host.docker.internal.pub') }}"
+  when: not coolify_ssh_key.stat.exists
+
+- name: Download Coolify configuration files
   get_url:
-    url: https://cdn.coollabs.io/coolify/install.sh
-    dest: /tmp/coolify-install.sh
-    mode: '0755'
-  when: not coolify_installed.stat.exists
+    url: "{{ item.url }}"
+    dest: "{{ item.dest }}"
+    mode: '0644'
+  loop:
+    - { url: 'https://cdn.coollabs.io/coolify/docker-compose.yml', dest: '/data/coolify/source/docker-compose.yml' }
+    - { url: 'https://cdn.coollabs.io/coolify/docker-compose.prod.yml', dest: '/data/coolify/source/docker-compose.prod.yml' }
+    - { url: 'https://cdn.coollabs.io/coolify/.env.production', dest: '/data/coolify/source/.env' }
+    - { url: 'https://cdn.coollabs.io/coolify/upgrade.sh', dest: '/data/coolify/source/upgrade.sh' }
 
-- name: Run Coolify installer (this may take 5-10 minutes)
-  command:
-    cmd: /tmp/coolify-install.sh -f
-  environment:
-    TERM: xterm
-  when: not coolify_installed.stat.exists
-  register: coolify_install_result
-  changed_when: true
+- name: Set correct ownership for Coolify files
+  file:
+    path: /data/coolify
+    owner: 9999
+    group: root
+    recurse: yes
+    mode: '0700'
 
-- name: Wait for Coolify to be ready
-  uri:
-    url: "http://localhost:8000"
-    status_code: [200, 302]
-  register: coolify_health
-  retries: 30
-  delay: 10
-  until: coolify_health.status in [200, 302]
-  when: not coolify_installed.stat.exists
+- name: Generate secure values for .env
+  shell: |
+    sed -i "s|APP_ID=.*|APP_ID=$(openssl rand -hex 16)|g" /data/coolify/source/.env
+    sed -i "s|APP_KEY=.*|APP_KEY=base64:$(openssl rand -base64 32)|g" /data/coolify/source/.env
+    sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=$(openssl rand -base64 32)|g" /data/coolify/source/.env
+    sed -i "s|REDIS_PASSWORD=.*|REDIS_PASSWORD=$(openssl rand -base64 32)|g" /data/coolify/source/.env
+    sed -i "s|PUSHER_APP_ID=.*|PUSHER_APP_ID=$(openssl rand -hex 32)|g" /data/coolify/source/.env
+    sed -i "s|PUSHER_APP_KEY=.*|PUSHER_APP_KEY=$(openssl rand -hex 32)|g" /data/coolify/source/.env
+    sed -i "s|PUSHER_APP_SECRET=.*|PUSHER_APP_SECRET=$(openssl rand -hex 32)|g" /data/coolify/source/.env
+  args:
+    creates: /data/coolify/source/.env.generated
+  register: env_generated
 
-- name: Get Raspberry Pi IP address
+- name: Mark .env as generated
+  file:
+    path: /data/coolify/source/.env.generated
+    state: touch
+  when: env_generated.changed
+
+- name: Create Docker network for Coolify
+  docker_network:
+    name: coolify
+    attachable: yes
+  ignore_errors: yes
+
+- name: Start Coolify with Docker Compose
+  shell: |
+    docker compose --env-file /data/coolify/source/.env \
+      -f /data/coolify/source/docker-compose.yml \
+      -f /data/coolify/source/docker-compose.prod.yml \
+      up -d --pull always --remove-orphans --force-recreate
+  args:
+    chdir: /data/coolify/source
+
+- name: Get device IP address
   set_fact:
-    pi_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
+    device_ip: "{{ ansible_default_ipv4.address | default(ansible_all_ipv4_addresses[0]) }}"
 
 - name: Display Coolify access info
   debug:
     msg:
       - "============================================="
       - "Coolify installed successfully!"
-      - "Access the UI at: http://{{ pi_ip }}:8000"
-      - "Complete the setup wizard to configure:"
-      - "  1. Admin account"
-      - "  2. Cloudflare Tunnel (Settings > Integrations)"
+      - "Access the UI at: http://{{ device_ip }}:8000"
       - "============================================="
