@@ -49,18 +49,50 @@
     group: "{{ runner_user }}"
   when: not runner_configured.stat.exists
 
-- name: Fail if Runner Token is missing
+- name: Fail if GitHub PAT is missing
   fail:
-    msg: "GitHub Runner Token is missing. Please ensure secrets.fact has github_runner_token."
-  when: not runner_configured.stat.exists and (runner_token is not defined or runner_token == '')
+    msg: "GitHub PAT is missing. Please ensure secrets.fact has github_pat."
+  when: not runner_configured.stat.exists and (github_pat is not defined or github_pat == '')
+
+- name: Get Registration Token from GitHub
+  uri:
+    url: "https://api.github.com/repos/{{ repo_url | regex_replace('^https://github.com/', '') }}/actions/runners/registration-token"
+    method: POST
+    headers:
+      Authorization: "token {{ github_pat }}"
+      Accept: "application/vnd.github.v3+json"
+    status_code: 201
+    return_content: yes
+  register: registration_token_response
+  when: not runner_configured.stat.exists
 
 - name: Configure Runner
   command:
-    cmd: "./config.sh --url {{ repo_url }} --token {{ runner_token }} --unattended --name {{ ansible_hostname }} --labels raspberry-pi,arm64"
+    cmd: "./config.sh --url {{ repo_url }} --token {{ registration_token_response.json.token }} --unattended --name {{ ansible_hostname }} --labels raspberry-pi,arm64"
     chdir: "{{ runner_dir }}"
   become: yes
   become_user: "{{ runner_user }}"
   when: not runner_configured.stat.exists
+  register: config_result
+  ignore_errors: yes
+
+- name: Debug Runner Config Failure
+  debug:
+    msg: 
+      - "Runner configuration failed!"
+      - "URL: {{ repo_url }}"
+      - "Note: Token used was dynamically generated via PAT"
+      - "Command output: {{ config_result.stderr }}"
+  when: config_result.failed
+
+- name: Debug Runner Config Failure
+  debug:
+    msg: 
+      - "Runner configuration failed!"
+      - "URL: {{ repo_url }}"
+      - "Token length: {{ runner_token | length }}"
+      - "Command output: {{ config_result.stderr }}"
+  when: config_result.failed
 
 - name: Install Runner Service
   command:

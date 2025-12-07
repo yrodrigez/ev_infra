@@ -57,7 +57,8 @@ fi
 
 # Required variables
 # Required variables
-REQUIRED_VARS=("USER_NAME" "DEVICE_HOSTNAME" "REPO_URL" "CLOUDFLARE_TUNNEL_TOKEN" "SSH_PUBLIC_KEY_LINE" "GITHUB_RUNNER_TOKEN")
+# Required variables
+REQUIRED_VARS=("USER_NAME" "DEVICE_HOSTNAME" "REPO_URL" "CLOUDFLARE_TUNNEL_TOKEN" "SSH_PUBLIC_KEY_LINE" "GITHUB_PAT")
 
 MISSING_VARS=0
 for VAR in "${REQUIRED_VARS[@]}"; do
@@ -74,6 +75,8 @@ fi
 
 # Set default for repo url if not set
 GITHUB_REPO_URL="${GITHUB_REPO_URL:-$REPO_URL}"
+# Strip .git suffix if present, as runner config expects web URL
+GITHUB_REPO_URL="${GITHUB_REPO_URL%.git}"
 
 # --- Generate Files ---
 
@@ -105,7 +108,7 @@ replace_var "$TARGET_USER_DATA" "DEVICE_HOSTNAME" "$DEVICE_HOSTNAME"
 replace_var "$TARGET_USER_DATA" "SSH_PUBLIC_KEY_LINE" "$SSH_PUBLIC_KEY_LINE"
 replace_var "$TARGET_USER_DATA" "REPO_URL" "$REPO_URL"
 replace_var "$TARGET_USER_DATA" "CLOUDFLARE_TOKEN" "$CLOUDFLARE_TUNNEL_TOKEN"
-replace_var "$TARGET_USER_DATA" "GITHUB_RUNNER_TOKEN" "$GITHUB_RUNNER_TOKEN"
+replace_var "$TARGET_USER_DATA" "GITHUB_PAT" "$GITHUB_PAT"
 replace_var "$TARGET_USER_DATA" "GITHUB_REPO_URL" "$GITHUB_REPO_URL"
 
 # Process meta-data

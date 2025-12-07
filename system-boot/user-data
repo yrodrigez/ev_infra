@@ -22,7 +22,7 @@ write_files:
     content: |
       [secrets]
       cloudflare_token={{CLOUDFLARE_TOKEN}}
-      github_runner_token={{GITHUB_RUNNER_TOKEN}}
+      github_pat={{GITHUB_PAT}}
       github_repo_url={{GITHUB_REPO_URL}}
 
   - path: /usr/local/bin/ansible_bootstrap.sh
@@ -51,7 +51,8 @@ write_files:
       export CLOUDFLARE_TOKEN="{{CLOUDFLARE_TOKEN}}"
       
       echo "[$(date)] Running Ansible Playbook..."
-      ansible-playbook -i "localhost," -c local "$CODE_DIR/playbooks/site.yml"
+      cd "$CODE_DIR"
+      ansible-playbook -i "localhost," -c local "playbooks/site.yml"
       
       echo "[$(date)] Bootstrap Completed Successfully!"
 
