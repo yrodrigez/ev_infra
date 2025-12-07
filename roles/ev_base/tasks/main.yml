@@ -8,10 +8,22 @@
     state: present
     update_cache: yes
 
-- name: Download docker-compose binary
+- name: Download docker-compose standalone binary
   get_url:
     url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64
     dest: /usr/local/bin/docker-compose
+    mode: '0755'
+
+- name: Create Docker CLI plugins directory
+  file:
+    path: /usr/local/lib/docker/cli-plugins
+    state: directory
+    mode: '0755'
+
+- name: Install Docker Compose v2 plugin
+  get_url:
+    url: https://github.com/docker/compose/releases/download/v5.0.0/docker-compose-linux-aarch64
+    dest: /usr/local/lib/docker/cli-plugins/docker-compose
     mode: '0755'
 
 - name: Ensure Docker service is running
