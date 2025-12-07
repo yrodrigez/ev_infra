@@ -4,4 +4,4 @@
   become: true
   roles:
     - ev_base
-    - github_runner
+    - coolify

@@ -1,9 +1,5 @@
 services:
-  hello:
-    image: nginxdemos/hello
-    restart: unless-stopped
-    ports:
-      - "8080:80"
+  # Hello service removed - will be deployed via Coolify
 
   cloudflared:
     image: cloudflare/cloudflared:latest
