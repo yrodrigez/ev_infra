@@ -118,4 +118,25 @@ mv "$TARGET_META.tmp" "$TARGET_META"
 awk -v val="$DEVICE_HOSTNAME-001" '/^instance-id:/ {$0="instance-id: " val} {print}' "$TARGET_META" > "$TARGET_META.tmp"
 mv "$TARGET_META.tmp" "$TARGET_META"
 
+# Process network-config (DHCP or Static IP)
+TARGET_NETWORK="$TARGET_DIR/network-config"
+if [ -n "${STATIC_IP:-}" ]; then
+    # Static IP mode
+    GATEWAY="${GATEWAY:-$(echo $STATIC_IP | sed 's/\.[0-9]*$/.1/')}"
+    DNS="${DNS:-8.8.8.8, 8.8.4.4}"
+    NETWORK_CONFIG="    addresses:
+      - ${STATIC_IP}/24
+    routes:
+      - to: default
+        via: ${GATEWAY}
+    nameservers:
+      addresses: [${DNS}]"
+    echo "Using static IP: $STATIC_IP (gateway: $GATEWAY)"
+else
+    # DHCP mode (default)
+    NETWORK_CONFIG="    dhcp4: true"
+    echo "Using DHCP for network configuration"
+fi
+replace_var "$TARGET_NETWORK" "NETWORK_CONFIG" "$NETWORK_CONFIG"
+
 echo "Done! Configuration files are ready in $TARGET_DIR"
