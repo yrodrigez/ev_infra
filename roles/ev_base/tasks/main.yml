@@ -8,6 +8,27 @@
     state: present
     update_cache: yes
 
+- name: Ensure /etc/docker exists
+  file:
+    path: /etc/docker
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure Docker to use IPv6
+  copy:
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      {
+        "ipv6": true,
+        "fixed-cidr-v6": "fd00:c001:1::/64"
+      }
+  notify: Restart docker
+
 - name: Download docker-compose standalone binary
   get_url:
     url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64
@@ -22,7 +43,7 @@
 
 - name: Install Docker Compose v2 plugin
   get_url:
-    url: https://github.com/docker/compose/releases/download/v5.0.0/docker-compose-linux-aarch64
+    url: https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-aarch64
     dest: /usr/local/lib/docker/cli-plugins/docker-compose
     mode: '0755'
 

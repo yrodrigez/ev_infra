@@ -1,5 +1,10 @@
 ---
+- name: Restart docker
+  service:
+    name: docker
+    state: restarted
+
 - name: Restart services
-  command: docker-compose restart
+  shell: docker-compose down && docker-compose up -d
   args:
     chdir: /opt/services
