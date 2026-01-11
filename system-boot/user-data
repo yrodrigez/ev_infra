@@ -58,3 +58,9 @@ write_files:
 
 runcmd:
   - [ bash, /usr/local/bin/ansible_bootstrap.sh ]
+  - [ touch, /etc/cloud/cloud-init.disabled ]
+  - [ systemctl, disable, cloud-init, cloud-config, cloud-final, cloud-init-local ]
+
+power_state:
+  mode: reboot
+  condition: true
