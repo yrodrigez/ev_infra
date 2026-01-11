@@ -73,6 +73,9 @@
   docker_network:
     name: coolify
     attachable: yes
+    enable_ipv6: yes
+    ipam_config:
+      - subnet: fd00:c001:2::/64
   ignore_errors: yes
 
 - name: Start Coolify with Docker Compose
